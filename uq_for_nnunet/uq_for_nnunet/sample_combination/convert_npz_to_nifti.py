@@ -223,7 +223,7 @@ def main():
     args = parser.parse_args()
 
     if args.output_dir is None:
-        args.output_dir = os.path.join(args.folder, "nifti_samples")
+        args.output_dir = os.path.join(args.folder)
 
     os.makedirs(args.output_dir, exist_ok=True)
     setup_logging(args.output_dir)
