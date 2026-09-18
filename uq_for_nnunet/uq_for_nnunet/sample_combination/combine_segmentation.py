@@ -108,7 +108,7 @@ def main():
                         help="Method of uncertainty generation (mc_dropout, ensemble, tta)")
     parser.add_argument("--folder", type=str, required=True,
                         help="Folder containing prediction files")
-    parser.add_argument("--patients", type=str, nargs="+", required=True,
+    parser.add_argument("--patients", type=str, nargs="+", required=False,
                         help="List of patient IDs to process")
     parser.add_argument("--output_dir", type=str, default=None,
                         help="Folder to save the combined segmentations")
