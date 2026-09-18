@@ -3,6 +3,7 @@
 
 """
 ===============================================================================
+
 Description:    Combines multiple segmentation predictions (e.g., MC Dropout,
                 Ensemble, or TTA) into a single final segmentation per patient.
 
@@ -12,7 +13,6 @@ Usage:
                                    --patients 001 002 003 \
                                    --output_dir /path/to/save/combined
 
-TO DO: logic of this file can be improved, a lot.
 ===============================================================================
 """
 
@@ -94,79 +94,10 @@ def combine_mc_segmentation(folder: str, patients: list, output_dir: str):
 
         # Save the combined segmentation as NIfTI
         combined_nii = nib.Nifti1Image(combined_seg, np.eye(4))
-        output_file = os.path.join(output_dir, f"combined_segmentation_patient_{patient}_MCD.nii.gz")
+        output_file = os.path.join(output_dir, f"combined_segmentation_patient_{patient}.nii.gz")
         nib.save(combined_nii, output_file)
         logging.info(f"Saved combined segmentation for patient {patient} at {output_file}")
 
-def combine_de_segmentation(folder: str, patients: list, output_dir: str):
-    # NOTE: this function is not checked
-    pattern = re.compile(f'*_{patient}.nii.gz')
-    for patient in patients:
-        logging.info(f"Processing patient {patient}")
-        all_seg = []
-
-        for fold in folds:
-            deep_ensemble_folder = os.path.join(deep_ensemble_main, fold)
-            for filename in os.listdir(deep_ensemble_folder):
-                match = pattern.match(filename)
-                if match:
-                    logging.info(f"Loading file: {filename}")
-                    seg = nib.load(os.path.join(deep_ensemble_folder, filename)).get_fdata()
-                    all_seg.append(seg)            
-        
-        shape = np.shape(all_seg)[1:] #skip first channels, this is the number of folds
-        all_seg = np.array(all_seg)
-        avg_pred_seg = np.zeros(shape)
-        
-        logging.info(f"Combining {len(all_seg)} samples for patient {patient} using majority vote")
-        
-        #determine most occuring ROI in each voxel
-        for i in tqdm(range(shape[0])):
-            for j in range(shape[1]):
-                for k in range(shape[2]):
-                    vals = all_seg[:,i,j,k]
-                    avg_pred_seg[i,j,k] = np.bincount(vals.astype(int)).argmax()
-        
-        # Save the combined segmentation as NIfTI
-        combined_nii = nib.Nifti1Image(avg_pred_seg, np.eye(4))
-        output_file = os.path.join(output_dir, f"combined_segmentation_patient_{patient}_DE.nii.gz")
-        nib.save(combined_nii, output_file) 
-        logging.info(f"Saved combined segmentation for patient {patient} at {output_file}")
-
-def combine_tta_segmentation(folder: str, patients: list, output_dir: str):
-    # NOTE: this function is not checked
-    pattern = re.compile(f'*_{patient}.nii.gz')
-
-    for patient in patients:
-        logging.info(f"Processing patient {patient}")
-        all_seg = []
-        for fold in folds:
-            deep_ensemble_folder = os.path.join(deep_ensemble_main, fold)
-            for filename in os.listdir(deep_ensemble_folder):
-                match = pattern.match(filename)
-                if match:
-                    logging.info(f"Loading file: {filename}")
-                    seg = nib.load(os.path.join(deep_ensemble_folder, filename)).get_fdata()
-                    all_seg.append(seg)           
-        
-        all_seg = all_seg
-        shape = np.shape(all_seg)[1:] #skip first channels, this is the number of folds
-        all_seg = np.array(all_seg)
-        avg_pred_seg = np.zeros(shape)
-        logging.info(f'Shape of all TTA outputs is {shape}')
-        
-        #determine most occuring ROI in each voxel
-        for i in tqdm(range(shape[0])):
-            for j in range(shape[1]):
-                for k in range(shape[2]):
-                    vals = all_seg[:,i,j,k]
-                    avg_pred_seg[i,j,k] = np.bincount(vals.astype(int)).argmax()
-        
-        # Save the combined segmentation as NIfTI
-        combined_nii = nib.Nifti1Image(avg_pred_seg, np.eye(4))
-        output_file = os.path.join(output_dir, f"combined_segmentation_patient_{patient}_TTA.nii.gz")
-        nib.save(combined_nii, output_file)
-        logging.info(f"Saved combined segmentation for patient {patient} at {output_file}")
 
 def main():
     # Parse command-line arguments
@@ -184,6 +115,11 @@ def main():
 
     args = parser.parse_args()
 
+    # default process all patients if not specified
+    if args.patients is None:
+        args.patients = [f.split('_')[1] for f in os.listdir(args.folder) if f.endswith('.nii.gz')]
+        logging.info(f"No specific patients provided. Processing all patients: {args.patients}")
+        
     # Set default output folder
     if args.output_dir is None:
         args.output_dir = os.path.join(args.folder, "combined_segmentations")
@@ -198,10 +134,6 @@ def main():
     # Run the requested method
     if args.method.lower() == "mc_dropout":
         combine_mc_segmentation(args.folder, args.patients, args.output_dir)
-    elif args.method.lower() == 'deep_ensemble':
-        combine_de_segmentation(args.folder, args.patients, args.output_dir)
-    elif args.method.lower() == 'tta':
-        combine_tta_segmentation(args.folder, args.patients, args.output_dir)
     else:
         raise NotImplementedError(f"Method '{args.method}' not implemented yet")
 
