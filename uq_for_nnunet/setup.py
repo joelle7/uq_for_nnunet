@@ -14,6 +14,7 @@ setup(
     ],
     entry_points={
         "console_scripts": [
+            "convert_npz_to_nifti = uq_for_nnunet.sample_combination.convert_npz_to_nifti:main",
             "combine_segmentation = uq_for_nnunet.sample_combination.combine_segmentation:main",
             "compute_uncertainty_map = uq_for_nnunet.sample_combination.compute_uncertainty_map:main",
             "evaluate_calibration = uq_for_nnunet.evaluation.evaluate_calibration:main",
