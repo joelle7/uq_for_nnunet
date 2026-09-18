@@ -23,7 +23,7 @@ Uncertainty quantification (UQ) for a nnU-Net segmentation model. Supports MC Dr
 
 ```bash
 git clone https://github.com/joelle7/uq_for_nnunet.git
-cd uq_for_nnunet/uq_for_nnunet
+cd uq_for_nnunet
 pip install -e .
 ```
 
