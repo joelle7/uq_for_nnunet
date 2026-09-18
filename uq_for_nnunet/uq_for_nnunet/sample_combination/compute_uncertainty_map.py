@@ -214,7 +214,7 @@ def create_uncertainty_map_from_samples(folder: str, patients: list = None, outp
 def main():
     parser = argparse.ArgumentParser(description="Compute uncertainty maps from prediction npz files.")
     parser.add_argument("--folder", type=str, required=True, help="Folder with npz prediction files")
-    parser.add_argument("--patients", type=str, nargs="+", required=True, default=None, help="List of patient IDs to process")
+    parser.add_argument("--patients", type=str, nargs="+", required=False, default=None, help="List of patient IDs to process")
     parser.add_argument("--output_dir", type=str, default=None, help="Folder to save uncertainty maps")
     parser.add_argument("--classes", type=int, required=True, help="Number of predicted classes")
     parser.add_argument("--keep_classes", type=str, nargs="+", default=None, help="List of classes to keep in uncertainty map")
@@ -223,7 +223,12 @@ def main():
     parser.add_argument("--roi_dict", type=str, default=None, help="Path to Python file containing ROI_DICT (e.g., roi_dict.py)")
 
     args = parser.parse_args()
-    
+
+   # default process all patients if not specified
+    if args.patients is None:
+        args.patients = [f.split('_')[1] for f in os.listdir(args.folder) if f.endswith('.npz')]
+        logging.info(f"No specific patients provided. Processing all patients: {args.patients}")
+        
     if args.output_dir is None:
         args.output_dir = os.path.join(args.folder, "uncertainty_maps")
     else:
