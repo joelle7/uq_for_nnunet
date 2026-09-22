@@ -1,6 +1,6 @@
 [console_scripts]
 combine_segmentation = uq_for_nnunet.sample_combination.combine_segmentation:main
 compute_uncertainty_map = uq_for_nnunet.sample_combination.compute_uncertainty_map:main
+convert_npz_to_nifti = uq_for_nnunet.sample_combination.convert_npz_to_nifti:main
 evaluate_calibration = uq_for_nnunet.evaluation.evaluate_calibration:main
 evaluate_uncertainty = uq_for_nnunet.evaluation.evaluate_uncertainty:main
-
