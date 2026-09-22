@@ -18,7 +18,8 @@ setup(
             "combine_segmentation = uq_for_nnunet.sample_combination.combine_segmentation:main",
             "compute_uncertainty_map = uq_for_nnunet.sample_combination.compute_uncertainty_map:main",
             "evaluate_calibration = uq_for_nnunet.evaluation.evaluate_calibration:main",
-            "evaluate_uncertainty = uq_for_nnunet.evaluation.evaluate_uncertainty:main"
+            "evaluate_uncertainty = uq_for_nnunet.evaluation.evaluate_uncertainty:main",
+            "crop_uncertainty_map = uq_for_nnunet.sample_combination.crop_uncertainty_map:main"
         ],
     },
 )
