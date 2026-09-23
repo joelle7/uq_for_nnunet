@@ -32,6 +32,7 @@ import logging
 from datetime import datetime
 from uq_for_nnunet.utils.uncertainty_metrics.metrics import entropy_prob, mutual_information_prob, entropy_classwise_prob, mutual_information_classwise_prob, variance_prob, variance_classwise_prob
 import nibabel as nib
+from uq_for_nnunet.sample_combination import crop_single_uncertainty_map
 
 def setup_logging(output_dir: str) -> str:
     """
@@ -84,7 +85,24 @@ def save_uncertainty_map_as_nifti(uncertainty_map: np.ndarray, output_file: str,
         nib.save(nifti_img, output_file)
     return
 
-def create_uncertainty_map_from_samples(folder: str, patients: list = None, output_dir: str = None, classes: int = 0, keep_classes: list = None, metrics: list = ['entropy'], methods: list = [], roi_dict: str = None):
+def create_uncertainty_map_from_samples(folder: str, patients: list = None, output_dir: str = None, classes: int = 0, keep_classes: list = None, metrics: list = ['entropy'], methods: list = [], roi_dict: str = None, crop_size: list = None):
+    """
+    Create uncertainty maps from multiple samples.
+
+    Args:
+        folder (str): Path to the folder containing the npz files.
+        patients (list): List of patient IDs to process.
+        output_dir (str): Path to the output directory.
+        classes (int): Number of classes in the segmentation.
+        keep_classes (list): List of class indices to keep.
+        metrics (list): List of uncertainty metrics to compute.
+        methods (list): List of uncertainty methods used to obtain the samples.
+        roi_dict (str): Path to a Python file that defines the ROI dictionary.
+        crop_size (list): Size to crop the uncertainty maps.
+
+    Returns:
+        None
+    """
 
     setup_logging(output_dir)
     
@@ -132,15 +150,15 @@ def create_uncertainty_map_from_samples(folder: str, patients: list = None, outp
 
             combined_data = {}
             for file in tqdm(all_files, desc="Samples"):
-                data = np.load(os.path.join(folder,file))
-                available_classes = np.shape(data['probabilities'])[0]
+                uncertainty_map = np.load(os.path.join(folder,file))
+                available_classes = np.shape(uncertainty_map['probabilities'])[0]
                 print(f"Number of classes available in uncertainty maps is {available_classes} and number of classes specified is {classes}")
                 
                 if keep_classes is not None:
                     keep_classes = list(map(int, keep_classes)) #convert string elements in list to integers
                    
                     if len(keep_classes) <= available_classes:                      
-                        print(f"Shape of data before: {np.shape(data['probabilities'])}")
+                        print(f"Shape of data before: {np.shape(uncertainty_map['probabilities'])}")
                         if not 0 in keep_classes: #if background is not mentioned as label to keep add it (as it alwasys SHOULD be used to compute uncertainty maps)
                             keep_classes = [0] + keep_classes
                     if len(keep_classes) != classes:
@@ -152,19 +170,31 @@ def create_uncertainty_map_from_samples(folder: str, patients: list = None, outp
                 # Apply class filtering
                 if keep_classes is not None:
                     print(f' Keeping classes {keep_classes}')
-                    data_probabilities = data['probabilities'][keep_classes]  # (n_keep, x, y, z)
+                    data_probabilities = uncertainty_map['probabilities'][keep_classes]  # (n_keep, x, y, z)
                 else:
-                    data_probabilities = data['probabilities']
+                    data_probabilities = uncertainty_map['probabilities']
+
+                # crop uncertainty map based on the segmentation midpoint and crop size
+                if crop_size is not None:
+                    # get segmentation file for the patient
+                    segmentation_filename_pattern = re.compile(f'.*_{patient}.nii.gz')
+                    segmentation_filename = next((f for f in os.listdir(folder) if segmentation_filename_pattern.match(f)), None) # get first matching segmentation file
+                    print(segmentation_filename)
+                    segmentation_arr = nib.load(os.path.join(folder, segmentation_filename)).get_fdata()
+                    print(f"Segmentation array is of shape {np.shape(segmentation_arr)}")
+
+                    # crop the uncertainty map based on the segmentation midpoint and crop size
+                    data_probabilities = crop_single_uncertainty_map(data_probabilities, segmentation_arr, crop_size)
+                    
                 
-                print(f"\n Data is of shape {np.shape(data['probabilities'])}\n\n")
-                
+                print(f"\n Data is of shape {np.shape(uncertainty_map['probabilities'])}\n\n")
                 # Combine data: concatenate numpy arrays per patient
-                for key in data.keys():
+                for key in uncertainty_map.keys():
                     print(key)
                     if key == 'probabilities':
                         arr = data_probabilities
                     else:
-                        arr = data[key]
+                        arr = uncertainty_map[key]
                     
                     if key in combined_data:
                         combined_data[key] = np.concatenate((combined_data[key], arr[np.newaxis, :,:,:,:]))
@@ -221,6 +251,7 @@ def main():
     parser.add_argument("--methods", nargs="+", required=True, help="List of uncertainty methods used to obtain the samples (mc_dropout, deep_ensemble, tta)") 
     parser.add_argument("--metrics", nargs="+", required=True, help="List of uncertainty metrics to compute (entropy, mutual_information, variance, classwise_entorpy)")
     parser.add_argument("--roi_dict", type=str, default=None, help="Path to Python file containing ROI_DICT (e.g., roi_dict.py)")
+    parser.add_argument("--cropsize", nargs='+', type=int, required=False, help="Crop size of uncertainty map (to reduce memory usage and speed up computation) as three integers: x_size y_size z_size")
 
     args = parser.parse_args()
 
@@ -236,7 +267,7 @@ def main():
  
     os.makedirs(args.output_dir, exist_ok=True)
     
-    create_uncertainty_map_from_samples(folder=args.folder, patients=args.patients, output_dir=args.output_dir, classes=args.classes, keep_classes=args.keep_classes, metrics=args.metrics, methods=args.methods, roi_dict=args.roi_dict)
+    create_uncertainty_map_from_samples(folder=args.folder, patients=args.patients, output_dir=args.output_dir, classes=args.classes, keep_classes=args.keep_classes, metrics=args.metrics, methods=args.methods, roi_dict=args.roi_dict, crop_size=args.cropsize)
 
 if __name__ == "__main__":
     main()

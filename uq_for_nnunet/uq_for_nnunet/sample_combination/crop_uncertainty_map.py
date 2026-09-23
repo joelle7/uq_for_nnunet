@@ -55,7 +55,47 @@ def get_midpoint_of_segmentation(segmentation_arr):
     print(f'Midpoint of segmentation: x={x_midpoint}, y={y_midpoint}, z={z_midpoint}')
     return [x_midpoint, y_midpoint, z_midpoint]
 
-def crop_uncertainty_maps(folder, patients, methods, crop_size, save_true): 
+def crop_single_uncertainty_map(uncertainty_map, segmentation_arr, crop_size):
+    """
+    Crop a single uncertainty map based on the segmentation midpoint and crop size.
+
+    Args:
+        uncertainty_map (np.ndarray): 4D array of the uncertainty map (classes, z, y, x).
+        segmentation_midpoint (list): Midpoint x, y, z coordinates of the segmentation mask.
+        crop_size (list): Size to crop the maps (x_size, y_size, z_size).
+
+    Returns:
+        cropped_map (np.ndarray): Cropped uncertainty map.
+    """
+    print(f'Segmentation shape: {segmentation_arr.shape}')
+    
+    segmentation_midpoint = get_midpoint_of_segmentation(segmentation_arr)
+
+    # uncertainty map is in shape classes, z, x, y
+    print(f'Original uncertainty map shape: {uncertainty_map.shape}')
+
+    xmin = segmentation_midpoint[0] - crop_size[0] // 2
+    xmax = segmentation_midpoint[0] + crop_size[0] // 2
+    ymin = segmentation_midpoint[1] - crop_size[1] // 2
+    ymax = segmentation_midpoint[1] + crop_size[1] // 2
+    zmin = segmentation_midpoint[2] - crop_size[2] // 2
+    zmax = segmentation_midpoint[2] + crop_size[2] // 2
+
+    print(f'Cropping coordinates: x({xmin}:{xmax}), y({ymin}:{ymax}), z({zmin}:{zmax})')
+    cropped_map = uncertainty_map[
+        :,
+        zmin:zmax,
+        ymin:ymax,
+        xmin:xmax
+    ]  # crop uncertainty map to [classes, zlim, ylim, xlim] based on the segmentation midpoint and crop size
+    print(f'Cropped map shape: {cropped_map.shape}')
+
+    return cropped_map
+    
+
+
+
+def crop_uncertainty_maps(folder, patients, methods, crop_size): 
     for patient in tqdm(patients, desc="Patients"):
         print(f'evaluating patient {patient}')
         for method in methods:
@@ -93,35 +133,15 @@ def crop_uncertainty_maps(folder, patients, methods, crop_size, save_true):
 
         print(segmentation_filename)
         segmentation_arr = nib.load(os.path.join(folder, segmentation_filename)).get_fdata()
-        print(f'Segmentation shape: {segmentation_arr.shape}')
-
-        segmentation_midpoint = get_midpoint_of_segmentation(segmentation_arr)
 
         # Use the segmentation midpoint to crop the uncertainty maps
         for file in all_files:
             uncertainty_map = np.load(os.path.join(folder, file))['probabilities']
-            # uncertainty map is in shape classes, z, x, y
-            print(f'Original uncertainty map shape: {uncertainty_map.shape}')
 
-            xmin = segmentation_midpoint[0] - crop_size[0] // 2
-            xmax = segmentation_midpoint[0] + crop_size[0] // 2
-            ymin = segmentation_midpoint[1] - crop_size[1] // 2
-            ymax = segmentation_midpoint[1] + crop_size[1] // 2
-            zmin = segmentation_midpoint[2] - crop_size[2] // 2
-            zmax = segmentation_midpoint[2] + crop_size[2] // 2
-
-            print(f'Cropping coordinates: x({xmin}:{xmax}), y({ymin}:{ymax}), z({zmin}:{zmax})')
-            cropped_map = uncertainty_map[
-                :,
-                zmin:zmax,
-                ymin:ymax,
-                xmin:xmax
-            ]  # crop uncertainty map to [classes, zlim, ylim, xlim] based on the segmentation midpoint and crop size
-            print(f'Cropped map shape: {cropped_map.shape}')
-
-            # save as ['probabilities'] instead of ['arr_0'] to be consistent with the original npz files
-            if save_true:
-                np.savez_compressed(os.path.join(folder, file.replace('.npz', '_cropped.npz')), probabilities=cropped_map)
+            cropped_map = crop_single_uncertainty_map(uncertainty_map, segmentation_arr, crop_size)
+            
+            # save as ['probabilities'] to be consistent with the original npz files
+            np.savez_compressed(os.path.join(folder, file.replace('.npz', '_cropped.npz')), probabilities=cropped_map)
 
 def main():
     parser = argparse.ArgumentParser(description="Crop uncertainty maps based on the ROI mask.")
@@ -129,7 +149,7 @@ def main():
     parser.add_argument("--patients", type=str, nargs='+', default=None, help="List of patient IDs to process. If not provided, all patients in the folder will be processed.")
     parser.add_argument("--methods", nargs="+", required=True, help="List of uncertainty methods used to obtain the samples (mc_dropout, deep_ensemble, tta)")
     parser.add_argument("--cropsize", nargs='+', type=int, required=True, help="Crop size as three integers: x_size y_size z_size")
-    parser.add_argument("--save", type=bool, default=True, help="Whether to save the cropped uncertainty maps. Default is True.")
+
     args = parser.parse_args()
 
     if args.patients is None:
@@ -138,4 +158,4 @@ def main():
         args.patients = list(set(args.patients))  # Remove duplicates
         print(f"No specific patients provided. Processing all patients: {args.patients}")
 
-    crop_uncertainty_maps(folder=args.folder, patients=args.patients, methods=args.methods, crop_size=args.cropsize, save_true=args.save)
+    crop_uncertainty_maps(folder=args.folder, patients=args.patients, methods=args.methods, crop_size=args.cropsize)
