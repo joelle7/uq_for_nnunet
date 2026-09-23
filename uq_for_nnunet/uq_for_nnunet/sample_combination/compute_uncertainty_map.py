@@ -176,6 +176,8 @@ def create_uncertainty_map_from_samples(folder: str, patients: list = None, outp
 
                 # crop uncertainty map based on the segmentation midpoint and crop size
                 if crop_size is not None:
+                    print(f"Cropping uncertainty map for patient {patient} with crop size {crop_size}\n")
+
                     # get segmentation file for the patient
                     segmentation_filename_pattern = re.compile(f'.*_{patient}.nii.gz')
                     segmentation_filename = next((f for f in os.listdir(folder) if segmentation_filename_pattern.match(f)), None) # get first matching segmentation file
@@ -185,7 +187,7 @@ def create_uncertainty_map_from_samples(folder: str, patients: list = None, outp
 
                     # crop the uncertainty map based on the segmentation midpoint and crop size
                     data_probabilities = crop_single_uncertainty_map(data_probabilities, segmentation_arr, crop_size)
-                    
+
                 
                 print(f"\n Data is of shape {np.shape(uncertainty_map['probabilities'])}\n\n")
                 # Combine data: concatenate numpy arrays per patient
