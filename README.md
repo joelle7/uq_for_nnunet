@@ -17,6 +17,9 @@ Uncertainty quantification (UQ) for a nnU-Net segmentation model. Supports MC Dr
               V
  evaluate_calibration.py   -->  evaluates uncertainty value calibration: ECE / accuracy vs uncertainty
  evaluate_uncertainty.py   -->  summarises uncertainty statistics per patient
+
+--> crop_uncertainty_map.py --> can be called from compute_uncertainty_map to crop uncertainty maps for better memory consumption, but can also be called seperately
+
 ```
 
 ## Installation
@@ -93,7 +96,10 @@ python compute_uncertainty_map.py --folder /path/to/npz_files \
                                    --output_dir /path/to/save/uncertainty_maps \
                                    --classes 20 \
                                    --methods mc_dropout \
-                                   --metrics entropy
+                                   --metrics entropy \
+                                   --roi_dict \
+                                   --crop_size
+
 ```
 
 Full example, with an ROI dictionary and multiple settings, written as a reusable shell script:
@@ -116,6 +122,8 @@ ROI_DICT="[...]/roi_dict.py"   # path to a Python file containing an ROI_DICT, j
 
 OUTPUT_DIR="PATH_TO_OUTPUT"   # leave empty to save alongside the predictions
 
+CROP_SIZE= (256 256 64) # dimensions (x,y,z) to crop the uncertainty maps to
+
 compute_uncertainty_map \
     --folder "$FOLDER" \
     --patients $PATIENTS \
@@ -123,7 +131,8 @@ compute_uncertainty_map \
     --metrics "$METRICS" \
     --methods "$METHODS" \
     --roi_dict "$ROI_DICT" \
-    --output_dir "$OUTPUT_DIR"
+    --output_dir "$OUTPUT_DIR" \
+    --crop_size "${CROP_SIZE[@]}" \
     #--keep_classes $KEEPING_CLASSES
 ```
 
@@ -180,11 +189,27 @@ evaluate_uncertainty \
     #--patients $PATIENTS
 ```
 
+### Crop uncertainty maps
+
+Crops the uncertainty maps to the provided dimensions. 
+Dimensions should be provided in (x,y,z)
+Expects the segmentation maps (.nii.gz) and uncertainty maps to be cropped (.npz) to be in the same folder, similar as data (i.e. samples) are saved when running --save_probabilities with nnU-Net
+Expects the uncertainty maps to be in (classes, z, x, y) (as directly delivered by nnU-Net) and segmentation maps in shape (x,y,z) (as directly delivered by nnU-Net)
+```bash
+CROP_SIZE = (256 256 64)
+
+crop_uncertainty_map \
+    --folder $FOLDER \
+    --methods $METHODS \
+    --crop_size "${CROP_SIZE[@]}" \
+   #--patients $PATIENTS
+```
+
 ## Known limitations
 
 This is an first release of the research code. For any questions or comments please contact :) (j.e.van.aalst[at]umcg.nl/joelle.vanaalst[at]live.nl)
 - **Folder structure samples** the folder structure for the mc_dropout samples are directly in the predictions folder and for Test-time augmentation and Deep ensemble must have subfolders. TO DO: fix
 - **Filename mismatch between steps 2 and 3.** `evaluate_calibration.py`/`evaluate_uncertainty.py` currently look for files by formatting, this needs to be fixed to a more robust method.
-- **Pass `--roi_dict` for now** when running `compute_uncertainty_map.py`, it needs to be present and cannot be left blank for now
+- **Pass `--roi_dict`** when running `compute_uncertainty_map.py`, it needs to be present and cannot be left blank for now
 - **MC Dropout sample matching is capped at 20 samples**
 
