@@ -151,6 +151,25 @@ ROI_DICT = {
 }
 ```
 
+## 2b. Crop uncertainty maps
+This function can be called directly when computing uncertainty maps with compute_uncertainty_map (2.) but can also be called on its own before running 2.
+
+### Crop uncertainty maps
+
+Crops the uncertainty maps to the provided dimensions. 
+Dimensions should be provided in (x,y,z)
+Expects the segmentation maps (.nii.gz) and uncertainty maps to be cropped (.npz) to be in the same folder, similar as data (i.e. samples) are saved when running --save_probabilities with nnU-Net
+Expects the uncertainty maps to be in (classes, z, x, y) (as directly delivered by nnU-Net) and segmentation maps in shape (x,y,z) (as directly delivered by nnU-Net)
+```bash
+CROP_SIZE = (256 256 64)
+
+crop_uncertainty_map \
+    --folder $FOLDER \
+    --methods $METHODS \
+    --crop_size "${CROP_SIZE[@]}" \
+   #--patients $PATIENTS
+```
+
 ## 3. Evaluate results
 
 ### Evaluate calibration
@@ -187,22 +206,6 @@ evaluate_uncertainty \
     --output_excel $OUTPUT_EXCEL_UNCERTAINTY_SCORES
     --metric $METRIC
     #--patients $PATIENTS
-```
-
-### Crop uncertainty maps
-
-Crops the uncertainty maps to the provided dimensions. 
-Dimensions should be provided in (x,y,z)
-Expects the segmentation maps (.nii.gz) and uncertainty maps to be cropped (.npz) to be in the same folder, similar as data (i.e. samples) are saved when running --save_probabilities with nnU-Net
-Expects the uncertainty maps to be in (classes, z, x, y) (as directly delivered by nnU-Net) and segmentation maps in shape (x,y,z) (as directly delivered by nnU-Net)
-```bash
-CROP_SIZE = (256 256 64)
-
-crop_uncertainty_map \
-    --folder $FOLDER \
-    --methods $METHODS \
-    --crop_size "${CROP_SIZE[@]}" \
-   #--patients $PATIENTS
 ```
 
 ## Known limitations
