@@ -52,7 +52,6 @@ def get_midpoint_of_segmentation(segmentation_arr):
     x_midpoint = (np.min(coords[0]) + np.max(coords[0])) // 2
     y_midpoint = (np.min(coords[1]) + np.max(coords[1])) // 2
 
-    print(f'Midpoint of segmentation: x={x_midpoint}, y={y_midpoint}, z={z_midpoint}')
     return [x_midpoint, y_midpoint, z_midpoint]
 
 def crop_single_uncertainty_map(uncertainty_map, segmentation_arr, crop_size):
@@ -72,7 +71,7 @@ def crop_single_uncertainty_map(uncertainty_map, segmentation_arr, crop_size):
     segmentation_midpoint = get_midpoint_of_segmentation(segmentation_arr)
 
     # uncertainty map is in shape classes, z, x, y
-    print(f'Original uncertainty map shape: {uncertainty_map.shape}')
+    
 
     xmin = segmentation_midpoint[0] - crop_size[0] // 2
     xmax = segmentation_midpoint[0] + crop_size[0] // 2
@@ -81,6 +80,7 @@ def crop_single_uncertainty_map(uncertainty_map, segmentation_arr, crop_size):
     zmin = segmentation_midpoint[2] - crop_size[2] // 2
     zmax = segmentation_midpoint[2] + crop_size[2] // 2
 
+    print(f'Midpoint of segmentation: x={segmentation_midpoint[0]}, y={segmentation_midpoint[1]}, z={segmentation_midpoint[2]}')
     print(f'Cropping coordinates: x({xmin}:{xmax}), y({ymin}:{ymax}), z({zmin}:{zmax})')
     cropped_map = uncertainty_map[
         :,
@@ -88,6 +88,7 @@ def crop_single_uncertainty_map(uncertainty_map, segmentation_arr, crop_size):
         ymin:ymax,
         xmin:xmax
     ]  # crop uncertainty map to [classes, zlim, ylim, xlim] based on the segmentation midpoint and crop size
+    print(f'Original uncertainty map shape: {uncertainty_map.shape}')
     print(f'Cropped map shape: {cropped_map.shape}')
 
     return cropped_map

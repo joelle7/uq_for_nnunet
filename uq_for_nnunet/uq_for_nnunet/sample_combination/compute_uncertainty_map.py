@@ -189,7 +189,6 @@ def create_uncertainty_map_from_samples(folder: str, patients: list = None, outp
                     segmentation_filename = next((f for f in os.listdir(folder) if segmentation_filename_pattern.match(f)), None) # get first matching segmentation file
                     print(segmentation_filename)
                     segmentation_arr = nib.load(os.path.join(folder, segmentation_filename)).get_fdata()
-                    print(f"Segmentation array is of shape {np.shape(segmentation_arr)}")
 
                     # crop the uncertainty map based on the segmentation midpoint and crop size
                     data_probabilities = crop_single_uncertainty_map(data_probabilities, segmentation_arr, crop_size)
