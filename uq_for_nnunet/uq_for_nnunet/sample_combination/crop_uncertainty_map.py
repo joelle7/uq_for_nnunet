@@ -5,6 +5,8 @@
 ===============================================================================
 Description:    Crop uncertainty samples based on the ROI mask to reduce memory
                 usage and speed up computation.
+                NOTE: this function assumes that the uncertainty maps are in the shape (classes, z, x, y) and the segmentation mask is in the shape (x, y, z).
+                And it assumes that the segmentation file and the uncertainty maps are in the same folder and have the same patient ID in their filenames.
 
 Usage:
     python crop_uncertainty_map.py --folder /path/to/npz_files \
@@ -30,6 +32,7 @@ import numpy as np
 def get_midpoint_of_segmentation(segmentation_arr):
     """
     Get the midpoint of the segmentation mask along the z-axis.
+    NOTE: assumes that the segmentation mask is in the shape (x, y, z).
 
     Args:
         segmentation_arr (np.ndarray): 3D array of the segmentation mask.
@@ -42,13 +45,14 @@ def get_midpoint_of_segmentation(segmentation_arr):
     coords = np.where(segmentation_arr > 0)
 
     # Calculate the midpoint along the z-axis
-    z_min, z_max = np.min(coords[0]), np.max(coords[0])
+    z_min, z_max = np.min(coords[2]), np.max(coords[2])
     z_midpoint = (z_min + z_max) // 2
 
     # Calculate the midpoint along the x and y axes
-    x_midpoint = (np.min(coords[1]) + np.max(coords[1])) // 2
-    y_midpoint = (np.min(coords[2]) + np.max(coords[2])) // 2
+    x_midpoint = (np.min(coords[0]) + np.max(coords[0])) // 2
+    y_midpoint = (np.min(coords[1]) + np.max(coords[1])) // 2
 
+    print(f'Midpoint of segmentation: x={x_midpoint}, y={y_midpoint}, z={z_midpoint}')
     return [x_midpoint, y_midpoint, z_midpoint]
 
 def crop_uncertainty_maps(folder, patients, methods, crop_size): 
@@ -84,28 +88,33 @@ def crop_uncertainty_maps(folder, patients, methods, crop_size):
  
             print(all_files)
 
-        segmentation_filename = re.compile(f'.*_{patient}.nii.gz')
+        segmentation_filename_pattern = re.compile(f'.*_{patient}.nii.gz')
+        segmentation_filename = next((f for f in os.listdir(folder) if segmentation_filename_pattern.match(f)), None) # get first matching segmentation file
+
+        print(segmentation_filename)
         segmentation_arr = nib.load(os.path.join(folder, segmentation_filename)).get_fdata()
+        print(f'Segmentation shape: {segmentation_arr.shape}')
 
         segmentation_midpoint = get_midpoint_of_segmentation(segmentation_arr)
 
         # Use the segmentation midpoint to crop the uncertainty maps
         for file in all_files:
             uncertainty_map = np.load(os.path.join(folder, file))['probabilities']
-            # uncertainty map is in shape z, x, y
-            print(f'Uncertainty map shape: {uncertainty_map.shape}')
+            # uncertainty map is in shape classes, z, x, y
+            print(f'Original uncertainty map shape: {uncertainty_map.shape}')
 
             cropped_map = uncertainty_map[
+                :,
                 max(0, segmentation_midpoint[2] - crop_size[2] // 2):
-                min(uncertainty_map.shape[0], segmentation_midpoint[2] + crop_size[2] // 2),
+                min(uncertainty_map.shape[1], segmentation_midpoint[2] + crop_size[2] // 2),
                 max(0, segmentation_midpoint[0] - crop_size[0] // 2):
-                min(uncertainty_map.shape[1], segmentation_midpoint[0] + crop_size[0] // 2),
+                min(uncertainty_map.shape[2], segmentation_midpoint[0] + crop_size[0] // 2),
                 max(0, segmentation_midpoint[1] - crop_size[1] // 2):
-                min(uncertainty_map.shape[2], segmentation_midpoint[1] + crop_size[1] // 2)
-            ]  
+                min(uncertainty_map.shape[3], segmentation_midpoint[1] + crop_size[1] // 2)
+            ]  # crop uncertainty map to [classes, zlim, xlim, ylim] based on the segmentation midpoint and crop size
             print(f'Cropped map shape: {cropped_map.shape}')
 
-            np.savez_compressed(os.path.join(folder, np.replace(file, '.npz', '_cropped.npz')), cropped_map)
+            np.savez_compressed(os.path.join(folder, file.replace('.npz', '_cropped.npz')), cropped_map)
 
 
 def main():
@@ -113,7 +122,7 @@ def main():
     parser.add_argument("--folder", type=str, required=True, help="Folder with npz prediction files")
     parser.add_argument("--patients", type=str, nargs='+', default=None, help="List of patient IDs to process. If not provided, all patients in the folder will be processed.")
     parser.add_argument("--methods", nargs="+", required=True, help="List of uncertainty methods used to obtain the samples (mc_dropout, deep_ensemble, tta)")
-    parser.add_argument("--cropsize", nargs=3, type=int, required=True, help="Crop size as three integers: x_size y_size z_size")
+    parser.add_argument("--cropsize", nargs='+', type=int, required=True, help="Crop size as three integers: x_size y_size z_size")
 
     args = parser.parse_args()
 
@@ -123,4 +132,4 @@ def main():
         args.patients = list(set(args.patients))  # Remove duplicates
         print(f"No specific patients provided. Processing all patients: {args.patients}")
 
-    crop_uncertainty_maps(folder=args.folder, patients=args.patients, methods=args.methods, cropsize=args.cropsize)
+    crop_uncertainty_maps(folder=args.folder, patients=args.patients, methods=args.methods, crop_size=args.cropsize)

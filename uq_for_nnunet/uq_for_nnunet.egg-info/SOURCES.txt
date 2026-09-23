@@ -13,6 +13,7 @@ uq_for_nnunet/sample_combination/__init__.py
 uq_for_nnunet/sample_combination/combine_segmentation.py
 uq_for_nnunet/sample_combination/compute_uncertainty_map.py
 uq_for_nnunet/sample_combination/convert_npz_to_nifti.py
+uq_for_nnunet/sample_combination/crop_uncertainty_map.py
 uq_for_nnunet/utils/__init__.py
 uq_for_nnunet/utils/roi_dict.py
 uq_for_nnunet/utils/Transforms/__init__.py
