@@ -148,7 +148,7 @@ def main():
     parser.add_argument("--folder", type=str, required=True, help="Folder with npz prediction files")
     parser.add_argument("--patients", type=str, nargs='+', default=None, help="List of patient IDs to process. If not provided, all patients in the folder will be processed.")
     parser.add_argument("--methods", nargs="+", required=True, help="List of uncertainty methods used to obtain the samples (mc_dropout, deep_ensemble, tta)")
-    parser.add_argument("--cropsize", nargs='+', type=int, required=True, help="Crop size as three integers: x_size y_size z_size")
+    parser.add_argument("--crop_size", nargs='+', type=int, required=True, help="Crop size as three integers: x_size y_size z_size")
 
     args = parser.parse_args()
 
@@ -158,4 +158,4 @@ def main():
         args.patients = list(set(args.patients))  # Remove duplicates
         print(f"No specific patients provided. Processing all patients: {args.patients}")
 
-    crop_uncertainty_maps(folder=args.folder, patients=args.patients, methods=args.methods, crop_size=args.cropsize)
+    crop_uncertainty_maps(folder=args.folder, patients=args.patients, methods=args.methods, crop_size=args.crop_size)

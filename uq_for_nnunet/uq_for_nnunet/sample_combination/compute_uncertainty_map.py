@@ -32,7 +32,13 @@ import logging
 from datetime import datetime
 from uq_for_nnunet.utils.uncertainty_metrics.metrics import entropy_prob, mutual_information_prob, entropy_classwise_prob, mutual_information_classwise_prob, variance_prob, variance_classwise_prob
 import nibabel as nib
-from uq_for_nnunet.sample_combination import crop_single_uncertainty_map
+
+# print working directory
+print(f"Current working directory: {os.getcwd()}")
+# print available files in the current directory
+print(f"Available files in the current directory: {os.listdir(os.getcwd())}")
+
+from uq_for_nnunet.sample_combination.crop_uncertainty_map import crop_single_uncertainty_map
 
 def setup_logging(output_dir: str) -> str:
     """
@@ -253,8 +259,8 @@ def main():
     parser.add_argument("--methods", nargs="+", required=True, help="List of uncertainty methods used to obtain the samples (mc_dropout, deep_ensemble, tta)") 
     parser.add_argument("--metrics", nargs="+", required=True, help="List of uncertainty metrics to compute (entropy, mutual_information, variance, classwise_entorpy)")
     parser.add_argument("--roi_dict", type=str, default=None, help="Path to Python file containing ROI_DICT (e.g., roi_dict.py)")
-    parser.add_argument("--cropsize", nargs='+', type=int, required=False, help="Crop size of uncertainty map (to reduce memory usage and speed up computation) as three integers: x_size y_size z_size")
-
+    parser.add_argument("--crop_size", nargs='+', type=int, required=True, help="Crop size as three integers: x_size y_size z_size")
+    
     args = parser.parse_args()
 
    # default process all patients if not specified
@@ -269,7 +275,7 @@ def main():
  
     os.makedirs(args.output_dir, exist_ok=True)
     
-    create_uncertainty_map_from_samples(folder=args.folder, patients=args.patients, output_dir=args.output_dir, classes=args.classes, keep_classes=args.keep_classes, metrics=args.metrics, methods=args.methods, roi_dict=args.roi_dict, crop_size=args.cropsize)
+    create_uncertainty_map_from_samples(folder=args.folder, patients=args.patients, output_dir=args.output_dir, classes=args.classes, keep_classes=args.keep_classes, metrics=args.metrics, methods=args.methods, roi_dict=args.roi_dict, crop_size=args.crop_size)
 
 if __name__ == "__main__":
     main()
