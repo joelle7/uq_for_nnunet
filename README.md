@@ -215,4 +215,6 @@ This is an first release of the research code. For any questions or comments ple
 - **Filename mismatch between steps 2 and 3.** `evaluate_calibration.py`/`evaluate_uncertainty.py` currently look for files by formatting, this needs to be fixed to a more robust method.
 - **Pass `--roi_dict`** when running `compute_uncertainty_map.py`, it needs to be present and cannot be left blank for now
 - **MC Dropout sample matching is capped at 20 samples**
+- **Midpoint crop** cropping does not work correctly if midpoint of crop is not more than half the cropped length away from the boundary
+
 
