@@ -144,6 +144,37 @@ def crop_uncertainty_maps(folder, patients, methods, crop_size):
             # save as ['probabilities'] to be consistent with the original npz files
             np.savez_compressed(os.path.join(folder, file.replace('.npz', '_cropped.npz')), probabilities=cropped_map)
 
+def crop_segmentation_map(segmentation_arr, crop_size):
+    """
+    Crop a segmentation map based on the segmentation midpoint and crop size.
+
+    Args:
+        segmentation_arr (np.ndarray): 3D array of the segmentation mask. (shape (x,y,z))
+        crop_size (list): Size to crop the maps (x_size, y_size, z_size).
+    """
+
+    segmentation_midpoint = get_midpoint_of_segmentation(segmentation_arr)
+
+    xmin = segmentation_midpoint[0] - crop_size[0] // 2
+    xmax = segmentation_midpoint[0] + crop_size[0] // 2
+    ymin = segmentation_midpoint[1] - crop_size[1] // 2
+    ymax = segmentation_midpoint[1] + crop_size[1] // 2
+    zmin = segmentation_midpoint[2] - crop_size[2] // 2
+    zmax = segmentation_midpoint[2] + crop_size[2] // 2
+
+    print(f'Midpoint of segmentation: x={segmentation_midpoint[0]}, y={segmentation_midpoint[1]}, z={segmentation_midpoint[2]}')
+    print(f'Cropping coordinates: x({xmin}:{xmax}), y({ymin}:{ymax}), z({zmin}:{zmax})')
+    cropped_map = segmentation_arr[
+        xmin:xmax,
+        ymin:ymax,
+        zmin:zmax
+    ]  # crop uncertainty map to [classes, zlim, ylim, xlim] based on the segmentation midpoint and crop size
+    print(f'Original segmentation map shape: {segmentation_arr.shape}')
+    print(f'Cropped map shape: {cropped_map.shape}')
+
+    return cropped_map
+
+
 def main():
     parser = argparse.ArgumentParser(description="Crop uncertainty maps based on the ROI mask.")
     parser.add_argument("--folder", type=str, required=True, help="Folder with npz prediction files")
